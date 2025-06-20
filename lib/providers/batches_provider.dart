@@ -3,7 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import '../models/batch.dart';
 
-final batchesProvider = StateNotifierProvider<BatchesNotifier, List<Batch>>((ref) {
+final batchesProvider = StateNotifierProvider<BatchesNotifier, List<Batch>>((
+  ref,
+) {
   return BatchesNotifier();
 });
 
@@ -23,26 +25,33 @@ class BatchesNotifier extends StateNotifier<List<Batch>> {
 
   void loadBatches() {
     _subscription?.cancel();
-    _subscription = _firestore.collection('batches').snapshots().listen((snapshot) {
-      state = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return Batch(
-          id: doc.id,
-          name: data['name'] as String,
-          timing: data['timing'] as String,
-          description: data['description'] as String,
-          startDate: (data['startDate'] as Timestamp).toDate(),
-          endDate: (data['endDate'] as Timestamp).toDate(),
-          isVisible: data['isVisible'] as bool? ?? true,
-          classGrade: data['classGrade'] as String,
-          subject: data['subject'] as String,
-          teacherId: data['teacherId'] as String,
-          teacherName: data['teacherName'] as String?,
+    _subscription = _firestore
+        .collection('batches')
+        .snapshots()
+        .listen(
+          (snapshot) {
+            state =
+                snapshot.docs.map((doc) {
+                  final data = doc.data();
+                  return Batch(
+                    id: doc.id,
+                    name: data['name'] as String,
+                    timing: data['timing'] as String,
+                    description: data['description'] as String,
+                    startDate: (data['startDate'] as Timestamp).toDate(),
+                    endDate: (data['endDate'] as Timestamp).toDate(),
+                    isVisible: data['isVisible'] as bool? ?? true,
+                    classGrade: data['classGrade'] as String,
+                    subject: data['subject'] as String,
+                    teacherId: data['teacherId'] as String,
+                    teacherName: data['teacherName'] as String?,
+                  );
+                }).toList();
+          },
+          onError: (e) {
+            print('Error loading batches: $e');
+          },
         );
-      }).toList();
-    }, onError: (e) {
-      print('Error loading batches: $e');
-    });
   }
 
   Future<void> addBatch(Batch batch) async {
@@ -79,13 +88,14 @@ class BatchesNotifier extends StateNotifier<List<Batch>> {
         'teacherId': batch.teacherId,
         'teacherName': batch.teacherName,
       });
-      
-      state = state.map((b) {
-        if (b.id == batch.id) {
-          return batch;
-        }
-        return b;
-      }).toList();
+
+      state =
+          state.map((b) {
+            if (b.id == batch.id) {
+              return batch;
+            }
+            return b;
+          }).toList();
     } catch (e) {
       print('Error updating batch: $e');
       throw e;
@@ -107,28 +117,29 @@ class BatchesNotifier extends StateNotifier<List<Batch>> {
       await _firestore.collection('batches').doc(id).update({
         'isVisible': isVisible,
       });
-      
-      state = state.map((batch) {
-        if (batch.id == id) {
-          return Batch(
-            id: batch.id,
-            name: batch.name,
-            timing: batch.timing,
-            description: batch.description,
-            startDate: batch.startDate,
-            endDate: batch.endDate,
-            isVisible: isVisible,
-            classGrade: batch.classGrade,
-            subject: batch.subject,
-            teacherId: batch.teacherId,
-            teacherName: batch.teacherName,
-          );
-        }
-        return batch;
-      }).toList();
+
+      state =
+          state.map((batch) {
+            if (batch.id == id) {
+              return Batch(
+                id: batch.id,
+                name: batch.name,
+                timing: batch.timing,
+                description: batch.description,
+                startDate: batch.startDate,
+                endDate: batch.endDate,
+                isVisible: isVisible,
+                classGrade: batch.classGrade,
+                subject: batch.subject,
+                teacherId: batch.teacherId,
+                teacherName: batch.teacherName,
+              );
+            }
+            return batch;
+          }).toList();
     } catch (e) {
       print('Error toggling batch visibility: $e');
       throw e;
     }
   }
-} 
+}

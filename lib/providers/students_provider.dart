@@ -3,9 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-final studentsProvider = StateNotifierProvider<StudentsNotifier, List<Map<String, dynamic>>>((ref) {
-  return StudentsNotifier();
-});
+final studentsProvider =
+    StateNotifierProvider<StudentsNotifier, List<Map<String, dynamic>>>((ref) {
+      return StudentsNotifier();
+    });
 
 class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
   final _firestore = FirebaseFirestore.instance;
@@ -33,21 +34,21 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
       }
 
       final snapshot = await _firestore.collection('students').get();
-      final newState = snapshot.docs.map((doc) => {
-        'id': doc.id,
-        ...doc.data(),
-      }).toList();
-      
+      final newState =
+          snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+
       print('Successfully loaded ${newState.length} students from Firestore');
       state = newState;
-      
+
       await _saveToCache(newState);
     } catch (e) {
       print('Error loading students: $e');
       print('Attempting to load from cache as fallback...');
       final cachedData = await _loadFromCache();
       if (cachedData != null) {
-        print('Successfully loaded ${cachedData.length} students from cache as fallback');
+        print(
+          'Successfully loaded ${cachedData.length} students from cache as fallback',
+        );
         state = cachedData;
       } else {
         print('No cached data available as fallback');
@@ -60,7 +61,7 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
       final prefs = await SharedPreferences.getInstance();
       final cachedStudents = prefs.getString(_cacheKey);
       final lastUpdated = prefs.getInt(_lastUpdatedKey);
-      
+
       if (cachedStudents != null && lastUpdated != null) {
         _lastUpdated = DateTime.fromMillisecondsSinceEpoch(lastUpdated);
         print('Cache last updated: ${_lastUpdated.toString()}');
@@ -76,32 +77,37 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
   Future<void> _saveToCache(List<Map<String, dynamic>> students) async {
     try {
       // Validate and clean data before caching
-      final cleanedStudents = students.map((student) {
-        // Ensure batchIds is always a List
-        if (student['batchIds'] == null) {
-          student['batchIds'] = [];
-        } else if (student['batchIds'] is! List) {
-          student['batchIds'] = [student['batchIds']];
-        }
+      final cleanedStudents =
+          students.map((student) {
+            // Ensure batchIds is always a List
+            if (student['batchIds'] == null) {
+              student['batchIds'] = [];
+            } else if (student['batchIds'] is! List) {
+              student['batchIds'] = [student['batchIds']];
+            }
 
-        // Ensure all required fields have default values
-        return {
-          'id': student['id'] ?? '',
-          'name': student['name'] ?? '',
-          'contact': student['contact'] ?? '',
-          'phone': student['phone'] ?? '',
-          'classGrade': student['classGrade'] ?? '',
-          'batchIds': student['batchIds'],
-          'profilePhotoUrl': student['profilePhotoUrl'],
-          'joinedDate': student['joinedDate'] ?? DateTime.now().toIso8601String(),
-          'totalFees': (student['totalFees'] as num?)?.toDouble() ?? 0.0,
-          'paidFees': (student['paidFees'] as num?)?.toDouble() ?? 0.0,
-        };
-      }).toList();
+            // Ensure all required fields have default values
+            return {
+              'id': student['id'] ?? '',
+              'name': student['name'] ?? '',
+              'contact': student['contact'] ?? '',
+              'phone': student['phone'] ?? '',
+              'classGrade': student['classGrade'] ?? '',
+              'batchIds': student['batchIds'],
+              'profilePhotoUrl': student['profilePhotoUrl'],
+              'joinedDate':
+                  student['joinedDate'] ?? DateTime.now().toIso8601String(),
+              'totalFees': (student['totalFees'] as num?)?.toDouble() ?? 0.0,
+              'paidFees': (student['paidFees'] as num?)?.toDouble() ?? 0.0,
+            };
+          }).toList();
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_cacheKey, json.encode(cleanedStudents));
-      await prefs.setInt(_lastUpdatedKey, DateTime.now().millisecondsSinceEpoch);
+      await prefs.setInt(
+        _lastUpdatedKey,
+        DateTime.now().millisecondsSinceEpoch,
+      );
       _lastUpdated = DateTime.now();
       print('Successfully cached ${cleanedStudents.length} students');
     } catch (e) {
@@ -117,7 +123,7 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
         'totalFees': (studentData['totalFees'] as num?)?.toDouble() ?? 0.0,
         'paidFees': (studentData['paidFees'] as num?)?.toDouble() ?? 0.0,
       };
-      
+
       final docRef = await _firestore.collection('students').add(data);
       final newStudent = {'id': docRef.id, ...data};
       state = [...state, newStudent];
@@ -128,22 +134,23 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
     }
   }
 
-  Future<void> updateStudent(String id, Map<String, dynamic> studentData) async {
+  Future<void> updateStudent(
+    String id,
+    Map<String, dynamic> studentData,
+  ) async {
     try {
       final currentStudent = state.firstWhere((student) => student['id'] == id);
-      final updatedData = {
-        ...currentStudent,
-        ...studentData,
-      };
+      final updatedData = {...currentStudent, ...studentData};
 
       await _firestore.collection('students').doc(id).update(studentData);
-      state = state.map((student) {
-        if (student['id'] == id) {
-          return updatedData;
-        }
-        return student;
-      }).toList();
-      
+      state =
+          state.map((student) {
+            if (student['id'] == id) {
+              return updatedData;
+            }
+            return student;
+          }).toList();
+
       await _saveToCache(state);
     } catch (e) {
       print('Error updating student: $e');
@@ -163,4 +170,4 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
   }
 
   DateTime? get lastUpdated => _lastUpdated;
-} 
+}

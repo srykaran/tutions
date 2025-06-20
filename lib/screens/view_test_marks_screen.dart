@@ -15,23 +15,24 @@ class ViewTestMarksScreen extends ConsumerStatefulWidget {
   const ViewTestMarksScreen({super.key});
 
   @override
-  ConsumerState<ViewTestMarksScreen> createState() => _ViewTestMarksScreenState();
+  ConsumerState<ViewTestMarksScreen> createState() =>
+      _ViewTestMarksScreenState();
 }
 
 class _ViewTestMarksScreenState extends ConsumerState<ViewTestMarksScreen> {
   final _testMarksService = TestMarksService();
   final _studentService = StudentService();
   final _formKey = GlobalKey<FormState>();
-  
+
   String? _selectedBatchId;
   List<Student> _filteredStudents = [];
   bool _isLoading = true;
-  
+
   // Test details controllers
   final _testNameController = TextEditingController();
   final _totalMarksController = TextEditingController();
   DateTime _testDate = DateTime.now();
-  
+
   // Student marks map
   final Map<String, TextEditingController> _studentMarksControllers = {};
 
@@ -56,21 +57,30 @@ class _ViewTestMarksScreenState extends ConsumerState<ViewTestMarksScreen> {
       if (_selectedBatchId != null) {
         // Use cached students from provider
         final allStudents = ref.read(studentsProvider);
-        final batchStudents = allStudents.where(
-          (student) => (student['batchIds'] as List).contains(_selectedBatchId)
-        ).toList();
-        
+        final batchStudents =
+            allStudents
+                .where(
+                  (student) =>
+                      (student['batchIds'] as List).contains(_selectedBatchId),
+                )
+                .toList();
+
         setState(() {
-          _filteredStudents = batchStudents.map((student) => Student(
-            id: student['id'],
-            name: student['name'],
-            contact: student['contact'],
-            phone: student['phone'],
-            classGrade: student['classGrade'],
-            batchId: _selectedBatchId!,
-            profilePhotoUrl: student['profilePhotoUrl'],
-            joinedDate: DateTime.parse(student['joinedDate']),
-          )).toList();
+          _filteredStudents =
+              batchStudents
+                  .map(
+                    (student) => Student(
+                      id: student['id'],
+                      name: student['name'],
+                      contact: student['contact'],
+                      phone: student['phone'],
+                      classGrade: student['classGrade'],
+                      batchId: _selectedBatchId!,
+                      profilePhotoUrl: student['profilePhotoUrl'],
+                      joinedDate: DateTime.parse(student['joinedDate']),
+                    ),
+                  )
+                  .toList();
           _initializeStudentMarksControllers();
           _isLoading = false;
         });
@@ -82,9 +92,9 @@ class _ViewTestMarksScreenState extends ConsumerState<ViewTestMarksScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading students: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading students: $e')));
       }
       setState(() => _isLoading = false);
     }
@@ -121,10 +131,12 @@ class _ViewTestMarksScreenState extends ConsumerState<ViewTestMarksScreen> {
     if (_formKey.currentState!.validate()) {
       try {
         final totalMarks = double.parse(_totalMarksController.text);
-        final selectedBatch = ref.read(batchesProvider).firstWhere(
-          (batch) => batch.id == _selectedBatchId,
-          orElse: () => throw Exception('Selected batch not found'),
-        );
+        final selectedBatch = ref
+            .read(batchesProvider)
+            .firstWhere(
+              (batch) => batch.id == _selectedBatchId,
+              orElse: () => throw Exception('Selected batch not found'),
+            );
 
         // Create a map of student marks
         final Map<String, double> studentMarks = {};
@@ -134,7 +146,7 @@ class _ViewTestMarksScreenState extends ConsumerState<ViewTestMarksScreen> {
             studentMarks[student.id] = double.parse(marksText);
           }
         }
-        
+
         final testMarks = TestMarks(
           id: _testMarksService.generateId(),
           batchId: selectedBatch.id!,
@@ -146,7 +158,7 @@ class _ViewTestMarksScreenState extends ConsumerState<ViewTestMarksScreen> {
         );
 
         await _testMarksService.addTestMarks(testMarks);
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Test marks saved successfully')),
@@ -192,7 +204,9 @@ class _ViewTestMarksScreenState extends ConsumerState<ViewTestMarksScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              ref.read(studentsProvider.notifier).loadStudents(forceRefresh: true);
+              ref
+                  .read(studentsProvider.notifier)
+                  .loadStudents(forceRefresh: true);
               _loadStudents(); // Reload students after refresh
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Refreshing student list...')),
@@ -202,244 +216,264 @@ class _ViewTestMarksScreenState extends ConsumerState<ViewTestMarksScreen> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(8.0),
         child: Form(
           key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Add Test Marks',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 24),
-              // Batch Filter
-              DropdownButtonFormField<String>(
-                value: _selectedBatchId,
-                decoration: const InputDecoration(
-                  labelText: 'Select Batch',
-                  prefixIcon: Icon(Icons.access_time),
-                  border: OutlineInputBorder(),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Add Test Marks',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                items: batches.map((batch) {
-                  return DropdownMenuItem(
-                    value: batch.id,
-                    child: Text('${batch.name} (${batch.subject})'),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedBatchId = value;
-                    _loadStudents();
-                  });
-                },
-              ),
-              const SizedBox(height: 24),
-              // Test Details
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Test Details',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          Text(
-                            DateFormat('dd/MM/yyyy').format(_testDate),
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Theme.of(context).primaryColor,
+                const SizedBox(height: 12),
+                // Batch Filter
+                DropdownButtonFormField<String>(
+                  value: _selectedBatchId,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Batch',
+                    prefixIcon: Icon(Icons.access_time),
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
+                  ),
+                  items:
+                      batches.map((batch) {
+                        return DropdownMenuItem(
+                          value: batch.id,
+                          child: Text('${batch.name} (${batch.subject})'),
+                        );
+                      }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedBatchId = value;
+                      _loadStudents();
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                // Test Details (collapsible)
+                ExpansionTile(
+                  title: Text(
+                    'Test Details',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  initiallyExpanded: true,
+                  children: [
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  DateFormat('dd/MM/yyyy').format(_testDate),
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium?.copyWith(
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _testNameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Test Name',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.assignment),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _testNameController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Test Name',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.assignment),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        vertical: 8,
+                                        horizontal: 12,
+                                      ),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter test name';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _totalMarksController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Total Marks',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.grade),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        vertical: 8,
+                                        horizontal: 12,
+                                      ),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter total marks';
+                                      }
+                                      if (double.tryParse(value) == null) {
+                                        return 'Please enter a valid number';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: () => _selectDate(context),
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Test Date',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.calendar_today),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 12,
+                                  ),
+                                ),
+                                child: Text(
+                                  DateFormat('dd/MM/yyyy').format(_testDate),
+                                ),
                               ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter test name';
-                                }
-                                return null;
-                              },
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _totalMarksController,
-                              decoration: const InputDecoration(
-                                labelText: 'Total Marks',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.grade),
-                              ),
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter total marks';
-                                }
-                                if (double.tryParse(value) == null) {
-                                  return 'Please enter a valid number';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      InkWell(
-                        onTap: () => _selectDate(context),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Test Date',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.calendar_today),
-                          ),
-                          child: Text(
-                            DateFormat('dd/MM/yyyy').format(_testDate),
-                          ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              // Students List with Marks Input
-              Expanded(
-                child: _isLoading
+                const SizedBox(height: 12),
+                // Students List with Marks Input
+                _isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : _filteredStudents.isEmpty
-                        ? const Center(child: Text('No students found in this batch'))
-                        : Column(
+                    ? const Center(
+                      child: Text('No students found in this batch'),
+                    )
+                    : Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Row(
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'Student Name',
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Marks',
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _filteredStudents.length,
+                          itemBuilder: (context, index) {
+                            final student = _filteredStudents[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 4),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0,
+                                  vertical: 4.0,
+                                ),
                                 child: Row(
                                   children: [
                                     Expanded(
-                                      flex: 2,
                                       child: Text(
-                                        'Student Name',
-                                        style: Theme.of(context).textTheme.titleMedium,
+                                        student.name,
+                                        style:
+                                            Theme.of(
+                                              context,
+                                            ).textTheme.bodyLarge,
                                       ),
                                     ),
-                                    Expanded(
-                                      child: Text(
-                                        'Marks',
-                                        style: Theme.of(context).textTheme.titleMedium,
+                                    SizedBox(
+                                      width: 80,
+                                      child: TextFormField(
+                                        controller:
+                                            _studentMarksControllers[student
+                                                .id],
+                                        decoration: const InputDecoration(
+                                          labelText: 'Marks',
+                                          border: OutlineInputBorder(),
+                                          contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                        ),
                                         textAlign: TextAlign.center,
+                                        keyboardType: TextInputType.number,
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Required';
+                                          }
+                                          if (double.tryParse(value) == null) {
+                                            return 'Invalid';
+                                          }
+                                          final marks = double.parse(value);
+                                          final totalMarks =
+                                              double.tryParse(
+                                                _totalMarksController.text,
+                                              ) ??
+                                              0;
+                                          if (marks > totalMarks) {
+                                            return 'Max: $totalMarks';
+                                          }
+                                          return null;
+                                        },
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              Expanded(
-                                child: ListView.builder(
-                                  itemCount: _filteredStudents.length,
-                                  itemBuilder: (context, index) {
-                                    final student = _filteredStudents[index];
-                                    return Card(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(12.0),
-                                        child: Row(
-                                          children: [
-                                            CircleAvatar(
-                                              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                                              child: Text(
-                                                student.name[0].toUpperCase(),
-                                                style: TextStyle(
-                                                  color: Theme.of(context).primaryColor,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    student.name,
-                                                    style: Theme.of(context).textTheme.titleMedium,
-                                                  ),
-                                                  Text(
-                                                    'Class: ${student.classGrade}',
-                                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                      color: Colors.grey[600],
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            SizedBox(
-                                              width: 100,
-                                              child: TextFormField(
-                                                controller: _studentMarksControllers[student.id],
-                                                decoration: const InputDecoration(
-                                                  labelText: 'Marks',
-                                                  border: OutlineInputBorder(),
-                                                  contentPadding: EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 8,
-                                                  ),
-                                                ),
-                                                textAlign: TextAlign.center,
-                                                keyboardType: TextInputType.number,
-                                                validator: (value) {
-                                                  if (value == null || value.isEmpty) {
-                                                    return 'Required';
-                                                  }
-                                                  if (double.tryParse(value) == null) {
-                                                    return 'Invalid';
-                                                  }
-                                                  final marks = double.parse(value);
-                                                  final totalMarks = double.tryParse(_totalMarksController.text) ?? 0;
-                                                  if (marks > totalMarks) {
-                                                    return 'Max: $totalMarks';
-                                                  }
-                                                  return null;
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: _saveAllTestMarks,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: _saveAllTestMarks,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.save),
+                    label: const Text('Save All Marks'),
                   ),
-                  icon: const Icon(Icons.save),
-                  label: const Text('Save All Marks'),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -473,12 +507,14 @@ class _StudentTestMarksScreenState extends State<StudentTestMarksScreen> {
     });
 
     try {
-      _testMarksStream = _testMarksService.getStudentTestMarks(widget.student.id);
+      _testMarksStream = _testMarksService.getStudentTestMarks(
+        widget.student.id,
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading test marks: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading test marks: $e')));
       }
     } finally {
       if (mounted) {
@@ -501,99 +537,100 @@ class _StudentTestMarksScreenState extends State<StudentTestMarksScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : StreamBuilder<List<TestMarks>>(
-              stream: _testMarksStream,
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Error: ${snapshot.error}'),
-                  );
-                }
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : StreamBuilder<List<TestMarks>>(
+                stream: _testMarksStream,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
 
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(
-                    child: Text('No test marks found'),
-                  );
-                }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Text('No test marks found'));
+                  }
 
-                final testMarks = snapshot.data!;
-                return ListView.builder(
-                  itemCount: testMarks.length,
-                  itemBuilder: (context, index) {
-                    final test = testMarks[index];
-                    final studentMark = test.studentMarks[widget.student.id] ?? 0.0;
-                    final percentage = (studentMark / test.totalMarks) * 100;
-                    
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    test.testName,
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                ),
-                                Text(
-                                  '${studentMark}/${test.totalMarks}',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Subject: ${test.subject}',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Date: ${DateFormat('dd/MM/yyyy').format(test.testDate)}',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            LinearProgressIndicator(
-                              value: studentMark / test.totalMarks,
-                              backgroundColor: Colors.grey[200],
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                percentage >= 60
-                                    ? Colors.green
-                                    : percentage >= 40
-                                        ? Colors.orange
-                                        : Colors.red,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${percentage.toStringAsFixed(1)}%',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
+                  final testMarks = snapshot.data!;
+                  return ListView.builder(
+                    itemCount: testMarks.length,
+                    itemBuilder: (context, index) {
+                      final test = testMarks[index];
+                      final studentMark =
+                          test.studentMarks[widget.student.id] ?? 0.0;
+                      final percentage = (studentMark / test.totalMarks) * 100;
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      test.testName,
+                                      style:
+                                          Theme.of(
+                                            context,
+                                          ).textTheme.titleMedium,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${studentMark}/${test.totalMarks}',
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Subject: ${test.subject}',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Date: ${DateFormat('dd/MM/yyyy').format(test.testDate)}',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              LinearProgressIndicator(
+                                value: studentMark / test.totalMarks,
+                                backgroundColor: Colors.grey[200],
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  percentage >= 60
+                                      ? Colors.green
+                                      : percentage >= 40
+                                      ? Colors.orange
+                                      : Colors.red,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${percentage.toStringAsFixed(1)}%',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => AddTestMarksScreen(
-                student: widget.student,
-              ),
+              builder: (context) => AddTestMarksScreen(student: widget.student),
             ),
           ).then((_) => _loadTestMarks());
         },
@@ -601,4 +638,4 @@ class _StudentTestMarksScreenState extends State<StudentTestMarksScreen> {
       ),
     );
   }
-} 
+}

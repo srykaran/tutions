@@ -47,7 +47,8 @@ class FeeService {
   Stream<Map<String, dynamic>> getStudentFeeSummary(String studentId) async* {
     final studentFees = _fees.where((fee) => fee.studentId == studentId);
     final totalAmount = studentFees.fold(0.0, (sum, fee) => sum + fee.amount);
-    final paidAmount = studentFees.where((fee) => fee.status == 'paid')
+    final paidAmount = studentFees
+        .where((fee) => fee.status == 'paid')
         .fold(0.0, (sum, fee) => sum + fee.amount);
     final pendingAmount = totalAmount - paidAmount;
 
@@ -57,4 +58,4 @@ class FeeService {
       'pendingAmount': pendingAmount,
     };
   }
-} 
+}

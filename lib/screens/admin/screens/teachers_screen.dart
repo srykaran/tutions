@@ -49,51 +49,55 @@ class _TeachersScreenState extends ConsumerState<TeachersScreen> {
   void _showAddTeacherDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add New Teacher'),
-        content: SingleChildScrollView(
-          child: TeacherForm(
-            formKey: _formKey,
-            nameController: _nameController,
-            emailController: _emailController,
-            phoneController: _phoneController,
-            educationController: _educationController,
-            selectedSubject: _selectedSubject,
-            selectedExperience: _selectedExperience,
-            subjects: _subjects,
-            experienceLevels: _experienceLevels,
-            onSubjectChanged: (value) {
-              setState(() => _selectedSubject = value);
-            },
-            onExperienceChanged: (value) {
-              setState(() => _selectedExperience = value);
-            },
-            isLoading: _isLoading,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Add New Teacher'),
+            content: SingleChildScrollView(
+              child: TeacherForm(
+                formKey: _formKey,
+                nameController: _nameController,
+                emailController: _emailController,
+                phoneController: _phoneController,
+                educationController: _educationController,
+                selectedSubject: _selectedSubject,
+                selectedExperience: _selectedExperience,
+                subjects: _subjects,
+                experienceLevels: _experienceLevels,
+                onSubjectChanged: (value) {
+                  setState(() => _selectedSubject = value);
+                },
+                onExperienceChanged: (value) {
+                  setState(() => _selectedExperience = value);
+                },
+                isLoading: _isLoading,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _clearForm();
+                },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _handleAddTeacher,
+                child:
+                    _isLoading
+                        ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                        : const Text('Add'),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _clearForm();
-            },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: _isLoading ? null : _handleAddTeacher,
-            child: _isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Text('Add'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -151,7 +155,7 @@ class _TeachersScreenState extends ConsumerState<TeachersScreen> {
   @override
   Widget build(BuildContext context) {
     final teachers = ref.watch(teachersProvider);
-    
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -185,16 +189,24 @@ class _TeachersScreenState extends ConsumerState<TeachersScreen> {
                     },
                     onDelete: () async {
                       try {
-                        await ref.read(teachersProvider.notifier).deleteTeacher(teacher['id']);
+                        await ref
+                            .read(teachersProvider.notifier)
+                            .deleteTeacher(teacher['id']);
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Teacher deleted successfully')),
+                            const SnackBar(
+                              content: Text('Teacher deleted successfully'),
+                            ),
                           );
                         }
                       } catch (e) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Failed to delete teacher: ${e.toString()}')),
+                            SnackBar(
+                              content: Text(
+                                'Failed to delete teacher: ${e.toString()}',
+                              ),
+                            ),
                           );
                         }
                       }
@@ -208,4 +220,4 @@ class _TeachersScreenState extends ConsumerState<TeachersScreen> {
       ),
     );
   }
-} 
+}

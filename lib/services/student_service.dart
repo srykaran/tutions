@@ -45,20 +45,20 @@ class StudentService {
         .where('batchIds', arrayContains: batchId)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return Student(
-          id: doc.id,
-          name: data['name']?.toString() ?? '',
-          contact: data['contact']?.toString() ?? '',
-          phone: data['phone']?.toString() ?? '',
-          classGrade: data['classGrade']?.toString() ?? '',
-          batchId: batchId, // Use the provided batchId
-          profilePhotoUrl: data['profilePhotoUrl']?.toString(),
-          joinedDate: _parseDate(data['joinedDate']),
-        );
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            return Student(
+              id: doc.id,
+              name: data['name']?.toString() ?? '',
+              contact: data['contact']?.toString() ?? '',
+              phone: data['phone']?.toString() ?? '',
+              classGrade: data['classGrade']?.toString() ?? '',
+              batchId: batchId, // Use the provided batchId
+              profilePhotoUrl: data['profilePhotoUrl']?.toString(),
+              joinedDate: _parseDate(data['joinedDate']),
+            );
+          }).toList();
+        });
   }
 
   // Update a student
@@ -90,21 +90,25 @@ class StudentService {
   Stream<List<Student>> searchStudents(String query) {
     final lowercaseQuery = query.toLowerCase();
     return _firestore.collection('students').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return Student(
-          id: doc.id,
-          name: data['name']?.toString() ?? '',
-          contact: data['contact']?.toString() ?? '',
-          phone: data['phone']?.toString() ?? '',
-          classGrade: data['classGrade']?.toString() ?? '',
-          batchId: data['batchId']?.toString() ?? '',
-          joinedDate: _parseDate(data['joinedDate']),
-        );
-      }).where((student) =>
-        student.name.toLowerCase().contains(lowercaseQuery) ||
-        student.phone.toLowerCase().contains(lowercaseQuery)
-      ).toList();
+      return snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            return Student(
+              id: doc.id,
+              name: data['name']?.toString() ?? '',
+              contact: data['contact']?.toString() ?? '',
+              phone: data['phone']?.toString() ?? '',
+              classGrade: data['classGrade']?.toString() ?? '',
+              batchId: data['batchId']?.toString() ?? '',
+              joinedDate: _parseDate(data['joinedDate']),
+            );
+          })
+          .where(
+            (student) =>
+                student.name.toLowerCase().contains(lowercaseQuery) ||
+                student.phone.toLowerCase().contains(lowercaseQuery),
+          )
+          .toList();
     });
   }
 
@@ -118,4 +122,4 @@ class StudentService {
       return DateTime.now();
     }
   }
-} 
+}

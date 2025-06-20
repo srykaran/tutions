@@ -20,7 +20,7 @@ class AdminDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = ref.watch(dashboardProvider);
-    
+
     final screens = [
       const DashboardHome(),
       const TeachersScreen(),
@@ -50,34 +50,37 @@ class AdminDashboard extends ConsumerWidget {
             onPressed: () {
               final user = ref.read(authProvider).user;
               final userRole = ref.read(authProvider).userRole;
-              
+
               showDialog(
                 context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Profile'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.email),
-                        title: const Text('Email'),
-                        subtitle: Text(user?.email ?? 'Not available'),
+                builder:
+                    (context) => AlertDialog(
+                      title: const Text('Profile'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.email),
+                            title: const Text('Email'),
+                            subtitle: Text(user?.email ?? 'Not available'),
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.work),
+                            title: const Text('Role'),
+                            subtitle: Text(
+                              userRole?.toUpperCase() ?? 'Not available',
+                            ),
+                          ),
+                        ],
                       ),
-                      ListTile(
-                        leading: const Icon(Icons.work),
-                        title: const Text('Role'),
-                        subtitle: Text(userRole?.toUpperCase() ?? 'Not available'),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
               );
             },
           ),
@@ -149,10 +152,7 @@ class AdminDashboard extends ConsumerWidget {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: selectedIndex,
-        children: screens,
-      ),
+      body: IndexedStack(index: selectedIndex, children: screens),
     );
   }
 }

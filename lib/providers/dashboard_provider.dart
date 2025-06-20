@@ -10,4 +10,4 @@ class DashboardNotifier extends StateNotifier<int> {
   void setSelectedIndex(int index) {
     state = index;
   }
-} 
+}

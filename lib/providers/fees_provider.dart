@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-final feesProvider = StateNotifierProvider<FeesNotifier, List<Map<String, dynamic>>>((ref) {
-  return FeesNotifier();
-});
+final feesProvider =
+    StateNotifierProvider<FeesNotifier, List<Map<String, dynamic>>>((ref) {
+      return FeesNotifier();
+    });
 
 class FeesNotifier extends StateNotifier<List<Map<String, dynamic>>> {
   final _firestore = FirebaseFirestore.instance;
@@ -16,10 +17,8 @@ class FeesNotifier extends StateNotifier<List<Map<String, dynamic>>> {
     try {
       print('Loading fees from Firestore...');
       final snapshot = await _firestore.collection('fees').get();
-      final fees = snapshot.docs.map((doc) => {
-        'id': doc.id,
-        ...doc.data(),
-      }).toList();
+      final fees =
+          snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
       print('Loaded ${fees.length} fees from Firestore');
       print('Fees data: $fees');
       state = fees;
@@ -43,12 +42,13 @@ class FeesNotifier extends StateNotifier<List<Map<String, dynamic>>> {
   Future<void> updateFee(String id, Map<String, dynamic> feeData) async {
     try {
       await _firestore.collection('fees').doc(id).update(feeData);
-      state = state.map((fee) {
-        if (fee['id'] == id) {
-          return {'id': id, ...feeData};
-        }
-        return fee;
-      }).toList();
+      state =
+          state.map((fee) {
+            if (fee['id'] == id) {
+              return {'id': id, ...feeData};
+            }
+            return fee;
+          }).toList();
     } catch (e) {
       print('Error updating fee: $e');
     }
@@ -63,19 +63,19 @@ class FeesNotifier extends StateNotifier<List<Map<String, dynamic>>> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getFeesByStudentId(String studentId) async {
+  Future<List<Map<String, dynamic>>> getFeesByStudentId(
+    String studentId,
+  ) async {
     try {
-      final snapshot = await _firestore
-          .collection('fees')
-          .where('studentId', isEqualTo: studentId)
-          .get();
-      return snapshot.docs.map((doc) => {
-        'id': doc.id,
-        ...doc.data(),
-      }).toList();
+      final snapshot =
+          await _firestore
+              .collection('fees')
+              .where('studentId', isEqualTo: studentId)
+              .get();
+      return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
     } catch (e) {
       print('Error getting fees by student ID: $e');
       return [];
     }
   }
-} 
+}

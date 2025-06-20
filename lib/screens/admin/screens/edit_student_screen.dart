@@ -7,10 +7,7 @@ import '../../../providers/batches_provider.dart';
 class EditStudentScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> student;
 
-  const EditStudentScreen({
-    super.key,
-    required this.student,
-  });
+  const EditStudentScreen({super.key, required this.student});
 
   @override
   ConsumerState<EditStudentScreen> createState() => _EditStudentScreenState();
@@ -32,7 +29,9 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
     _nameController = TextEditingController(text: widget.student['name']);
     _contactController = TextEditingController(text: widget.student['contact']);
     _phoneController = TextEditingController(text: widget.student['phone']);
-    _schoolNameController = TextEditingController(text: widget.student['schoolName']);
+    _schoolNameController = TextEditingController(
+      text: widget.student['schoolName'],
+    );
     _selectedClass = widget.student['classGrade'];
     _selectedBatchIds = List<String>.from(widget.student['batchIds'] ?? []);
   }
@@ -52,19 +51,31 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final newBatchIds = _selectedBatchIds.map((id) => id.toString()).toList();
+      final double totalFees = newBatchIds.length * 2000.0;
+
       final updatedStudent = {
         'name': _nameController.text,
         'contact': _contactController.text,
         'phone': _phoneController.text,
         'schoolName': _schoolNameController.text,
         'classGrade': _selectedClass,
-        'batchIds': _selectedBatchIds,
+        'batchIds': newBatchIds,
+        'totalFees': totalFees,
       };
 
-      await ref.read(studentsProvider.notifier).updateStudent(
-        widget.student['id'],
-        updatedStudent,
+      print(
+        'Updating student \\${widget.student['id']} with: \\${updatedStudent}',
       );
+
+      await ref
+          .read(studentsProvider.notifier)
+          .updateStudent(widget.student['id'], updatedStudent);
+
+      // Force reload students from Firestore
+      await ref
+          .read(studentsProvider.notifier)
+          .loadStudents(forceRefresh: true);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -74,9 +85,9 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating student: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating student: $e')));
       }
     } finally {
       if (mounted) {
@@ -87,11 +98,16 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final allBatches = ref.watch(batchesProvider).where((batch) => batch.isVisible).toList();
-    final classes = allBatches.map((batch) => batch.classGrade).toSet().toList()..sort();
-    final filteredBatches = _selectedClass != null
-        ? allBatches.where((batch) => batch.classGrade == _selectedClass).toList()
-        : allBatches;
+    final allBatches =
+        ref.watch(batchesProvider).where((batch) => batch.isVisible).toList();
+    final classes =
+        allBatches.map((batch) => batch.classGrade).toSet().toList()..sort();
+    final filteredBatches =
+        _selectedClass != null
+            ? allBatches
+                .where((batch) => batch.classGrade == _selectedClass)
+                .toList()
+            : allBatches;
 
     return Scaffold(
       appBar: AppBar(
@@ -174,16 +190,18 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.class_),
                 ),
-                items: classes.map((className) {
-                  return DropdownMenuItem<String>(
-                    value: className,
-                    child: Text(className),
-                  );
-                }).toList(),
+                items:
+                    classes.map((className) {
+                      return DropdownMenuItem<String>(
+                        value: className,
+                        child: Text(className),
+                      );
+                    }).toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedClass = value;
-                    _selectedBatchIds = []; // Clear selected batches when class changes
+                    _selectedBatchIds =
+                        []; // Clear selected batches when class changes
                   });
                 },
                 validator: (value) {
@@ -196,10 +214,7 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
               const SizedBox(height: 16),
               const Text(
                 'Select Batches',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               if (_selectedClass == null)
@@ -237,9 +252,10 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
                   ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Update Student'),
+                  child:
+                      _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('Update Student'),
                 ),
               ),
             ],
@@ -248,4 +264,4 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
       ),
     );
   }
-} 
+}

@@ -13,27 +13,34 @@ class BatchService {
 
   void _initializeBatches() {
     _subscription?.cancel();
-    _subscription = _firestore.collection('batches').snapshots().listen((snapshot) {
-      final batches = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return Batch(
-          id: doc.id,
-          name: data['name'] as String,
-          timing: data['timing'] as String,
-          description: data['description'] as String,
-          startDate: (data['startDate'] as Timestamp).toDate(),
-          endDate: (data['endDate'] as Timestamp).toDate(),
-          isVisible: data['isVisible'] as bool? ?? true,
-          classGrade: data['classGrade'] as String,
-          subject: data['subject'] as String,
-          teacherId: data['teacherId'] as String,
-          teacherName: data['teacherName'] as String?,
+    _subscription = _firestore
+        .collection('batches')
+        .snapshots()
+        .listen(
+          (snapshot) {
+            final batches =
+                snapshot.docs.map((doc) {
+                  final data = doc.data();
+                  return Batch(
+                    id: doc.id,
+                    name: data['name'] as String,
+                    timing: data['timing'] as String,
+                    description: data['description'] as String,
+                    startDate: (data['startDate'] as Timestamp).toDate(),
+                    endDate: (data['endDate'] as Timestamp).toDate(),
+                    isVisible: data['isVisible'] as bool? ?? true,
+                    classGrade: data['classGrade'] as String,
+                    subject: data['subject'] as String,
+                    teacherId: data['teacherId'] as String,
+                    teacherName: data['teacherName'] as String?,
+                  );
+                }).toList();
+            _batchController.add(batches);
+          },
+          onError: (e) {
+            print('Error loading batches: $e');
+          },
         );
-      }).toList();
-      _batchController.add(batches);
-    }, onError: (e) {
-      print('Error loading batches: $e');
-    });
   }
 
   // Create a new batch
@@ -105,4 +112,4 @@ class BatchService {
     _subscription?.cancel();
     _batchController.close();
   }
-} 
+}

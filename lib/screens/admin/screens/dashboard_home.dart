@@ -11,9 +11,30 @@ class DashboardHome extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Welcome to Sankalp Academy',
-            style: Theme.of(context).textTheme.headlineSmall,
+          Row(
+            children: [
+              Text(
+                'Welcome to Sankalp Academy',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(width: 12),
+              Tooltip(
+                message:
+                    'Platform is in testing mode. Keep manual records too to be safe from data loss.',
+                child: Chip(
+                  label: Text(
+                    'Beta',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  backgroundColor: Colors.blue,
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 24),
           // Summary Cards
@@ -68,10 +89,7 @@ class DashboardHome extends StatelessWidget {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 300,
-            child: _buildActivityList(),
-          ),
+          SizedBox(height: 300, child: _buildActivityList()),
         ],
       ),
     );
@@ -95,9 +113,9 @@ class DashboardHome extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
@@ -106,10 +124,10 @@ class DashboardHome extends StatelessWidget {
             Text(
               value,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
@@ -139,10 +157,7 @@ class DashboardHome extends StatelessWidget {
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-              child: Icon(
-                Icons.notifications,
-                color: AppTheme.primaryColor,
-              ),
+              child: Icon(Icons.notifications, color: AppTheme.primaryColor),
             ),
             title: Text(
               activities[index]['title']!,
@@ -161,4 +176,4 @@ class DashboardHome extends StatelessWidget {
       },
     );
   }
-} 
+}

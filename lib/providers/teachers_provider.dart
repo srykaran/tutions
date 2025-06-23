@@ -9,45 +9,7 @@ final teachersProvider =
 class TeachersNotifier extends StateNotifier<List<Map<String, dynamic>>> {
   final _firestore = FirebaseFirestore.instance;
 
-  TeachersNotifier()
-    : super([
-        {
-          'id': '1',
-          'name': 'John Smith',
-          'email': 'john.smith@example.com',
-          'phone': '+1234567890',
-          'subjects': ['Mathematics', 'Physics'],
-          'classes': ['9th', '10th'],
-          'isActive': true,
-        },
-        {
-          'id': '2',
-          'name': 'Sarah Johnson',
-          'email': 'sarah.johnson@example.com',
-          'phone': '+1234567891',
-          'subjects': ['Chemistry', 'Biology'],
-          'classes': ['9th', '10th'],
-          'isActive': true,
-        },
-        {
-          'id': '3',
-          'name': 'Michael Brown',
-          'email': 'michael.brown@example.com',
-          'phone': '+1234567892',
-          'subjects': ['English', 'History'],
-          'classes': ['9th', '10th'],
-          'isActive': true,
-        },
-        {
-          'id': '4',
-          'name': 'Emily Davis',
-          'email': 'emily.davis@example.com',
-          'phone': '+1234567893',
-          'subjects': ['Geography', 'Computer Science'],
-          'classes': ['9th', '10th'],
-          'isActive': true,
-        },
-      ]) {
+  TeachersNotifier() : super([]) {
     loadTeachers();
   }
 

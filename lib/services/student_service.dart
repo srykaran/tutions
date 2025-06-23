@@ -32,7 +32,16 @@ class StudentService {
           phone: data['phone']?.toString() ?? '',
           classGrade: data['classGrade']?.toString() ?? '',
           batchId: data['batchId']?.toString() ?? '',
+          profilePhotoUrl: data['profilePhotoUrl']?.toString(),
           joinedDate: _parseDate(data['joinedDate']),
+          active:
+              data['active'] is bool
+                  ? data['active']
+                  : (data['active'] ?? true),
+          currentYear:
+              data['currentYear'] is int
+                  ? data['currentYear']
+                  : (data['currentYear'] ?? DateTime.now().year),
         );
       }).toList();
     });
@@ -56,6 +65,14 @@ class StudentService {
               batchId: batchId, // Use the provided batchId
               profilePhotoUrl: data['profilePhotoUrl']?.toString(),
               joinedDate: _parseDate(data['joinedDate']),
+              active:
+                  data['active'] is bool
+                      ? data['active']
+                      : (data['active'] ?? true),
+              currentYear:
+                  data['currentYear'] is int
+                      ? data['currentYear']
+                      : (data['currentYear'] ?? DateTime.now().year),
             );
           }).toList();
         });
@@ -100,7 +117,16 @@ class StudentService {
               phone: data['phone']?.toString() ?? '',
               classGrade: data['classGrade']?.toString() ?? '',
               batchId: data['batchId']?.toString() ?? '',
+              profilePhotoUrl: data['profilePhotoUrl']?.toString(),
               joinedDate: _parseDate(data['joinedDate']),
+              active:
+                  data['active'] is bool
+                      ? data['active']
+                      : (data['active'] ?? true),
+              currentYear:
+                  data['currentYear'] is int
+                      ? data['currentYear']
+                      : (data['currentYear'] ?? DateTime.now().year),
             );
           })
           .where(

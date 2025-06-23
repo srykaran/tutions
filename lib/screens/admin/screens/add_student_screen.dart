@@ -12,6 +12,9 @@ import '../../../providers/students_provider.dart';
 import '../../../providers/batches_provider.dart';
 import '../../../services/cloudinary_service.dart';
 import 'add_student_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../providers/fees_provider.dart';
+import '../../../models/fee.dart';
 
 class AddStudentScreen extends ConsumerStatefulWidget {
   const AddStudentScreen({super.key});
@@ -57,8 +60,10 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
         final originalSize = file.size;
-        print('Original image size: ${(originalSize / 1024).toStringAsFixed(2)}KB');
-        
+        print(
+          'Original image size: ${(originalSize / 1024).toStringAsFixed(2)}KB',
+        );
+
         if (kIsWeb) {
           // For web, we'll use the bytes directly
           if (file.bytes != null) {
@@ -68,17 +73,22 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
               minWidth: 1024,
               quality: 85,
             );
-            
-            print('First compression size: ${(compressedBytes.length / 1024).toStringAsFixed(2)}KB');
-            
+
+            print(
+              'First compression size: ${(compressedBytes.length / 1024).toStringAsFixed(2)}KB',
+            );
+
             if (compressedBytes.length > 100 * 1024) {
-              final secondCompressedBytes = await FlutterImageCompress.compressWithList(
-                compressedBytes,
-                minHeight: 800,
-                minWidth: 800,
-                quality: 70,
+              final secondCompressedBytes =
+                  await FlutterImageCompress.compressWithList(
+                    compressedBytes,
+                    minHeight: 800,
+                    minWidth: 800,
+                    quality: 70,
+                  );
+              print(
+                'Second compression size: ${(secondCompressedBytes.length / 1024).toStringAsFixed(2)}KB',
               );
-              print('Second compression size: ${(secondCompressedBytes.length / 1024).toStringAsFixed(2)}KB');
               setState(() {
                 _selectedImageBytes = secondCompressedBytes;
               });
@@ -93,40 +103,60 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
           if (file.path != null) {
             final tempDir = await getTemporaryDirectory();
             final tempPath = tempDir.path;
-            
+
             final compressedBytes = await FlutterImageCompress.compressWithFile(
               file.path!,
               minHeight: 1024,
               minWidth: 1024,
               quality: 85,
             );
-            
+
             if (compressedBytes != null) {
-              print('First compression size: ${(compressedBytes.length / 1024).toStringAsFixed(2)}KB');
-              
+              print(
+                'First compression size: ${(compressedBytes.length / 1024).toStringAsFixed(2)}KB',
+              );
+
               if (compressedBytes.length > 100 * 1024) {
-                final tempFile = File(path.join(tempPath, 'temp_${DateTime.now().millisecondsSinceEpoch}.jpg'));
-                await tempFile.writeAsBytes(compressedBytes);
-                
-                final secondCompressedBytes = await FlutterImageCompress.compressWithFile(
-                  tempFile.path,
-                  minHeight: 800,
-                  minWidth: 800,
-                  quality: 70,
+                final tempFile = File(
+                  path.join(
+                    tempPath,
+                    'temp_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                  ),
                 );
-                
+                await tempFile.writeAsBytes(compressedBytes);
+
+                final secondCompressedBytes =
+                    await FlutterImageCompress.compressWithFile(
+                      tempFile.path,
+                      minHeight: 800,
+                      minWidth: 800,
+                      quality: 70,
+                    );
+
                 await tempFile.delete();
-                
+
                 if (secondCompressedBytes != null) {
-                  print('Second compression size: ${(secondCompressedBytes.length / 1024).toStringAsFixed(2)}KB');
-                  final finalFile = File(path.join(tempPath, 'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg'));
+                  print(
+                    'Second compression size: ${(secondCompressedBytes.length / 1024).toStringAsFixed(2)}KB',
+                  );
+                  final finalFile = File(
+                    path.join(
+                      tempPath,
+                      'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                    ),
+                  );
                   await finalFile.writeAsBytes(secondCompressedBytes);
                   setState(() {
                     _selectedImage = finalFile;
                   });
                 }
               } else {
-                final finalFile = File(path.join(tempPath, 'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg'));
+                final finalFile = File(
+                  path.join(
+                    tempPath,
+                    'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                  ),
+                );
                 await finalFile.writeAsBytes(compressedBytes);
                 setState(() {
                   _selectedImage = finalFile;
@@ -135,22 +165,25 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
             }
           }
         }
-        
+
         // Show compression result to user
-        final finalSize = kIsWeb ? _selectedImageBytes!.length : _selectedImage!.lengthSync();
+        final finalSize =
+            kIsWeb ? _selectedImageBytes!.length : _selectedImage!.lengthSync();
         final compressionRatio = (originalSize / finalSize).toStringAsFixed(1);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Image compressed from ${(originalSize / 1024).toStringAsFixed(1)}KB to ${(finalSize / 1024).toStringAsFixed(1)}KB (${compressionRatio}x smaller)'),
+            content: Text(
+              'Image compressed from ${(originalSize / 1024).toStringAsFixed(1)}KB to ${(finalSize / 1024).toStringAsFixed(1)}KB (${compressionRatio}x smaller)',
+            ),
             duration: Duration(seconds: 3),
           ),
         );
       }
     } catch (e) {
       print('Error picking or compressing image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
     }
   }
 
@@ -182,9 +215,13 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
         if (_selectedImage != null || _selectedImageBytes != null) {
           final cloudinaryService = CloudinaryService();
           if (kIsWeb && _selectedImageBytes != null) {
-            profilePhotoUrl = await cloudinaryService.uploadImageFromBytes(_selectedImageBytes!);
+            profilePhotoUrl = await cloudinaryService.uploadImageFromBytes(
+              _selectedImageBytes!,
+            );
           } else if (_selectedImage != null) {
-            profilePhotoUrl = await cloudinaryService.uploadImage(_selectedImage!);
+            profilePhotoUrl = await cloudinaryService.uploadImage(
+              _selectedImage!,
+            );
           }
         }
 
@@ -202,32 +239,70 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
           'joinedDate': DateTime.now().toIso8601String(),
           'profilePhotoUrl': profilePhotoUrl,
           'totalFees': totalFees,
-          'paidFees': 0, // Initialize paid fees as 0
+          'active': true,
+          'currentYear': DateTime.now().year,
         };
 
-        await ref.read(studentsProvider.notifier).addStudent(studentData);
+        // Add student to students collection
+        final studentsNotifier = ref.read(studentsProvider.notifier);
+        await studentsNotifier.addStudent(studentData);
+        // Get the new student's ID (last added)
+        final newStudent = studentsNotifier.state.last;
+        final studentId = newStudent['id'];
+
+        // Add fee document to fees collection
+        final firestore = FirebaseFirestore.instance;
+        await firestore.collection('fees').doc(studentId).set({
+          'studentId': studentId,
+          'totalFees': totalFees,
+          'paidFees': 0,
+          'transactions': [],
+        });
+        // Update local provider state
+        ref
+            .read(feesProvider.notifier)
+            .setFeeLocal(
+              studentId,
+              Fee(
+                totalFees: totalFees.toDouble(),
+                paidFees: 0.0,
+                transactions: [],
+              ),
+            );
+        // Update batches to include this student
+        for (final batchId in _selectedBatchIds) {
+          await firestore.collection('batches').doc(batchId).update({
+            'studentIds': FieldValue.arrayUnion([studentId]),
+          });
+        }
+
         _clearForm();
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Student added successfully')),
         );
-        
+
         Navigator.pop(context);
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding student: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error adding student: $e')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final allBatches = ref.watch(batchesProvider).where((batch) => batch.isVisible).toList();
-    final classes = allBatches.map((batch) => batch.classGrade).toSet().toList()..sort();
-    final filteredBatches = _selectedClass != null
-        ? allBatches.where((batch) => batch.classGrade == _selectedClass).toList()
-        : allBatches;
+    final allBatches =
+        ref.watch(batchesProvider).where((batch) => batch.isVisible).toList();
+    final classes =
+        allBatches.map((batch) => batch.classGrade).toSet().toList()..sort();
+    final filteredBatches =
+        _selectedClass != null
+            ? allBatches
+                .where((batch) => batch.classGrade == _selectedClass)
+                .toList()
+            : allBatches;
 
     return Scaffold(
       appBar: AppBar(
@@ -253,24 +328,30 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                       shape: BoxShape.circle,
                       border: Border.all(color: AppTheme.primaryColor),
                     ),
-                    child: _selectedImage != null || _selectedImageBytes != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: kIsWeb
-                                ? Image.memory(
-                                    _selectedImageBytes!,
-                                    width: 100,
-                                    height: 100,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Image.file(
-                                    _selectedImage!,
-                                    width: 100,
-                                    height: 100,
-                                    fit: BoxFit.cover,
-                                  ),
-                          )
-                        : Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
+                    child:
+                        _selectedImage != null || _selectedImageBytes != null
+                            ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child:
+                                  kIsWeb
+                                      ? Image.memory(
+                                        _selectedImageBytes!,
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                      )
+                                      : Image.file(
+                                        _selectedImage!,
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                      ),
+                            )
+                            : Icon(
+                              Icons.add_a_photo,
+                              size: 40,
+                              color: Colors.grey,
+                            ),
                   ),
                 ),
               ),
@@ -341,7 +422,10 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _classGradeController.text.isEmpty ? null : _classGradeController.text,
+                value:
+                    _classGradeController.text.isEmpty
+                        ? null
+                        : _classGradeController.text,
                 decoration: const InputDecoration(
                   labelText: 'Class Grade',
                   border: OutlineInputBorder(),
@@ -402,7 +486,8 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectedClass = value;
-                    _selectedBatchIds = []; // Clear selected batches when class changes
+                    _selectedBatchIds =
+                        []; // Clear selected batches when class changes
                   });
                 },
               ),
@@ -441,7 +526,9 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                           return CheckboxListTile(
                             title: Text('${batch.name} (${batch.timing})'),
                             subtitle: Text(batch.subject),
-                            value: _selectedBatchIds.contains(batch.id.toString()),
+                            value: _selectedBatchIds.contains(
+                              batch.id.toString(),
+                            ),
                             onChanged: (bool? value) {
                               setState(() {
                                 if (value == true) {
@@ -476,4 +563,4 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       ),
     );
   }
-} 
+}

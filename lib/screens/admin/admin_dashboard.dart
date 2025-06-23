@@ -17,23 +17,32 @@ import '../view_test_marks_screen.dart';
 class AdminDashboard extends ConsumerWidget {
   const AdminDashboard({super.key});
 
+  Widget _getScreen(int index) {
+    switch (index) {
+      case 0:
+        return const DashboardHome();
+      case 1:
+        return const TeachersScreen();
+      case 2:
+        return const BatchesScreen();
+      case 3:
+        return const StudentsScreen();
+      case 4:
+        return const AttendanceScreen();
+      case 5:
+        return const FeesScreen();
+      case 6:
+        return const ViewTestMarksScreen();
+      case 7:
+        return const SettingsScreen();
+      default:
+        return const DashboardHome();
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = ref.watch(dashboardProvider);
-
-    final screens = [
-      const DashboardHome(),
-      const TeachersScreen(),
-      const BatchesScreen(),
-      const StudentsScreen(),
-      const AttendanceScreen(),
-      const FeesScreen(),
-      const HomeworkScreen(),
-      const NotificationsScreen(),
-      const ReportsScreen(),
-      const ViewTestMarksScreen(),
-      const SettingsScreen(),
-    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -126,21 +135,6 @@ class AdminDashboard extends ConsumerWidget {
             label: Text('Fees'),
           ),
           NavigationDrawerDestination(
-            icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment),
-            label: Text('Homework'),
-          ),
-          NavigationDrawerDestination(
-            icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications),
-            label: Text('Notifications'),
-          ),
-          NavigationDrawerDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: Text('Reports'),
-          ),
-          NavigationDrawerDestination(
             icon: Icon(Icons.grade_outlined),
             selectedIcon: Icon(Icons.grade),
             label: Text('Test Marks'),
@@ -152,7 +146,7 @@ class AdminDashboard extends ConsumerWidget {
           ),
         ],
       ),
-      body: IndexedStack(index: selectedIndex, children: screens),
+      body: _getScreen(selectedIndex),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import '../models/batch.dart';
+import '../services/summary_dashboard_service.dart';
 
 final batchesProvider = StateNotifierProvider<BatchesNotifier, List<Batch>>((
   ref,
@@ -50,6 +51,8 @@ class BatchesNotifier extends StateNotifier<List<Batch>> {
           },
           onError: (e) {
             print('Error loading batches: $e');
+            state = [];
+            // Optionally, you could add an error field to the provider for UI
           },
         );
   }
@@ -68,6 +71,8 @@ class BatchesNotifier extends StateNotifier<List<Batch>> {
         'teacherId': batch.teacherId,
         'teacherName': batch.teacherName,
       });
+      // Update summary dashboard
+      await SummaryDashboardService().updateSummary(batchDelta: 1);
     } catch (e) {
       print('Error adding batch: $e');
       throw e;
@@ -106,6 +111,8 @@ class BatchesNotifier extends StateNotifier<List<Batch>> {
     try {
       await _firestore.collection('batches').doc(id).delete();
       state = state.where((batch) => batch.id != id).toList();
+      // Update summary dashboard
+      await SummaryDashboardService().updateSummary(batchDelta: -1);
     } catch (e) {
       print('Error deleting batch: $e');
       throw e;

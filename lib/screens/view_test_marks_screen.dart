@@ -78,6 +78,14 @@ class _ViewTestMarksScreenState extends ConsumerState<ViewTestMarksScreen> {
                       batchId: _selectedBatchId!,
                       profilePhotoUrl: student['profilePhotoUrl'],
                       joinedDate: DateTime.parse(student['joinedDate']),
+                      active:
+                          student['active'] is bool
+                              ? student['active']
+                              : (student['active'] ?? true),
+                      currentYear:
+                          student['currentYear'] is int
+                              ? student['currentYear']
+                              : (student['currentYear'] ?? DateTime.now().year),
                     ),
                   )
                   .toList();

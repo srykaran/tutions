@@ -37,56 +37,74 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       setState(() {
         _isLoading = true;
       });
-      
-      print('Loading students for batch: $_selectedBatchId');
-      // Use cached students from provider
-      final allStudents = ref.read(studentsProvider);
-      print('Total students in cache: ${allStudents.length}');
-      
-      final batchStudents = allStudents.where(
-        (student) {
-          // Safely handle batchIds
-          final batchIds = student['batchIds'];
-          if (batchIds == null) {
-            print('Student ${student['name']} has no batchIds');
-            return false;
-          }
-          
-          // Convert to List if it's not already
-          final List<dynamic> batchIdList = batchIds is List ? batchIds : [batchIds];
-          final hasBatch = batchIdList.contains(_selectedBatchId);
-          print('Student ${student['name']} batchIds: $batchIdList, hasBatch: $hasBatch');
-          return hasBatch;
-        }
-      ).toList();
-      
-      print('Found ${batchStudents.length} students in batch');
-      
-      setState(() {
-        _students = batchStudents.map((student) {
-          // Safely parse the joinedDate
-          DateTime joinedDate;
-          try {
-            joinedDate = DateTime.parse(student['joinedDate'] ?? DateTime.now().toIso8601String());
-          } catch (e) {
-            print('Error parsing joinedDate for student ${student['name']}, using current date');
-            joinedDate = DateTime.now();
-          }
-
-          return Student(
-            id: student['id'],
-            name: student['name'] ?? '',
-            contact: student['contact'] ?? '',
-            phone: student['phone'] ?? '',
-            classGrade: student['classGrade'] ?? '',
-            batchId: _selectedBatchId!,
-            profilePhotoUrl: student['profilePhotoUrl'],
-            joinedDate: joinedDate,
-          );
-        }).toList();
-        _initializeAttendanceMap();
-        _isLoading = false;
-      });
+      try {
+        print('Loading students for batch: $_selectedBatchId');
+        // Use cached students from provider
+        final allStudents = ref.read(studentsProvider);
+        print('Total students in cache: ${allStudents.length}');
+        final batchStudents =
+            allStudents.where((student) {
+              // Safely handle batchIds
+              final batchIds = student['batchIds'];
+              if (batchIds == null) {
+                print('Student \\${student['name']} has no batchIds');
+                return false;
+              }
+              // Convert to List if it's not already
+              final List<dynamic> batchIdList =
+                  batchIds is List ? batchIds : [batchIds];
+              final hasBatch = batchIdList.contains(_selectedBatchId);
+              print(
+                'Student \\${student['name']} batchIds: $batchIdList, hasBatch: $hasBatch',
+              );
+              return hasBatch;
+            }).toList();
+        print('Found \\${batchStudents.length} students in batch');
+        setState(() {
+          _students =
+              batchStudents.map((student) {
+                // Safely parse the joinedDate
+                DateTime joinedDate;
+                try {
+                  joinedDate = DateTime.parse(
+                    student['joinedDate'] ?? DateTime.now().toIso8601String(),
+                  );
+                } catch (e) {
+                  print(
+                    'Error parsing joinedDate for student \\${student['name']}, using current date',
+                  );
+                  joinedDate = DateTime.now();
+                }
+                return Student(
+                  id: student['id'],
+                  name: student['name'] ?? '',
+                  contact: student['contact'] ?? '',
+                  phone: student['phone'] ?? '',
+                  classGrade: student['classGrade'] ?? '',
+                  batchId: _selectedBatchId!,
+                  profilePhotoUrl: student['profilePhotoUrl'],
+                  joinedDate: joinedDate,
+                  active:
+                      student['active'] is bool
+                          ? student['active']
+                          : (student['active'] ?? true),
+                  currentYear:
+                      student['currentYear'] is int
+                          ? student['currentYear']
+                          : (student['currentYear'] ?? DateTime.now().year),
+                );
+              }).toList();
+          _initializeAttendanceMap();
+          _isLoading = false;
+        });
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading students: \\${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -125,10 +143,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         _isLoading = true;
       });
 
-      final batch = await FirebaseFirestore.instance
-          .collection('batches')
-          .doc(_selectedBatchId)
-          .get();
+      final batch =
+          await FirebaseFirestore.instance
+              .collection('batches')
+              .doc(_selectedBatchId)
+              .get();
 
       if (!batch.exists) {
         throw Exception('Batch not found');
@@ -138,17 +157,21 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       final batchName = batchData['name'] as String;
 
       // Create a single attendance document for the batch
-      final attendanceCollection = FirebaseFirestore.instance.collection('attendance');
-      
+      final attendanceCollection = FirebaseFirestore.instance.collection(
+        'attendance',
+      );
+
       // Get list of absent students' names
-      final absentStudents = _students
-          .where((student) => _attendanceMap[student.id] == false)
-          .map((student) => student.name)
-          .toList();
+      final absentStudents =
+          _students
+              .where((student) => _attendanceMap[student.id] == false)
+              .map((student) => student.name)
+              .toList();
 
       // Create a new document with batch ID and date as part of the ID
-      final docId = '${_selectedBatchId}_${DateFormat('yyyyMMdd').format(_selectedDate)}';
-      
+      final docId =
+          '${_selectedBatchId}_${DateFormat('yyyyMMdd').format(_selectedDate)}';
+
       await attendanceCollection.doc(docId).set({
         'batchId': _selectedBatchId,
         'batchName': batchName,
@@ -202,7 +225,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             icon: const Icon(Icons.refresh),
             onPressed: () {
               print('Manual refresh requested');
-              ref.read(studentsProvider.notifier).loadStudents(forceRefresh: true);
+              ref
+                  .read(studentsProvider.notifier)
+                  .loadStudents(forceRefresh: true);
               _loadStudents(); // Reload students after refresh
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Refreshing student list...')),
@@ -247,12 +272,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 vertical: 12,
                               ),
                             ),
-                            items: batches.map((batch) {
-                              return DropdownMenuItem(
-                                value: batch.id,
-                                child: Text(batch.name),
-                              );
-                            }).toList(),
+                            items:
+                                batches.map((batch) {
+                                  return DropdownMenuItem(
+                                    value: batch.id,
+                                    child: Text(batch.name),
+                                  );
+                                }).toList(),
                             onChanged: (value) {
                               print('Batch selected: $value');
                               if (value != null) {
@@ -293,9 +319,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               if (_isLoading)
                 const Center(child: CircularProgressIndicator())
               else if (_students.isEmpty && _selectedBatchId != null)
-                const Center(
-                  child: Text('No students found in this batch'),
-                )
+                const Center(child: Text('No students found in this batch'))
               else if (_students.isNotEmpty)
                 Expanded(
                   child: ListView.builder(
@@ -323,20 +347,25 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             children: [
                               CircleAvatar(
                                 radius: 24,
-                                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                                backgroundImage: student.profilePhotoUrl != null
-                                    ? NetworkImage(student.profilePhotoUrl!)
-                                    : null,
-                                child: student.profilePhotoUrl == null
-                                    ? Text(
-                                        student.name[0],
-                                        style: TextStyle(
-                                          color: Theme.of(context).primaryColor,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18,
-                                        ),
-                                      )
-                                    : null,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).primaryColor.withOpacity(0.1),
+                                backgroundImage:
+                                    student.profilePhotoUrl != null
+                                        ? NetworkImage(student.profilePhotoUrl!)
+                                        : null,
+                                child:
+                                    student.profilePhotoUrl == null
+                                        ? Text(
+                                          student.name[0],
+                                          style: TextStyle(
+                                            color:
+                                                Theme.of(context).primaryColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                          ),
+                                        )
+                                        : null,
                               ),
                               const SizedBox(width: 16),
                               Expanded(
@@ -353,9 +382,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                     const SizedBox(height: 4),
                                     Text(
                                       student.classGrade,
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                      ),
+                                      style: TextStyle(color: Colors.grey[600]),
                                     ),
                                   ],
                                 ),
@@ -367,7 +394,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   });
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: !isPresent ? Colors.red : Colors.grey,
+                                  backgroundColor:
+                                      !isPresent ? Colors.red : Colors.grey,
                                   foregroundColor: Colors.white,
                                 ),
                                 child: const Text('Absent'),
@@ -403,4 +431,4 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       ),
     );
   }
-} 
+}

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../constants/theme.dart';
 import '../../../providers/students_provider.dart';
 import '../../../providers/batches_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../providers/fees_provider.dart';
 
 class EditStudentScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> student;
@@ -22,6 +24,7 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
   String? _selectedClass;
   List<String> _selectedBatchIds = [];
   bool _isLoading = false;
+  bool _isActive = true;
 
   @override
   void initState() {
@@ -34,6 +37,10 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
     );
     _selectedClass = widget.student['classGrade'];
     _selectedBatchIds = List<String>.from(widget.student['batchIds'] ?? []);
+    _isActive =
+        widget.student['active'] is bool
+            ? widget.student['active']
+            : widget.student['active'] == 'active';
   }
 
   @override
@@ -62,6 +69,7 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
         'classGrade': _selectedClass,
         'batchIds': newBatchIds,
         'totalFees': totalFees,
+        'active': _isActive,
       };
 
       print(
@@ -71,6 +79,37 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
       await ref
           .read(studentsProvider.notifier)
           .updateStudent(widget.student['id'], updatedStudent);
+
+      // Update totalFees in fees collection
+      final firestore = FirebaseFirestore.instance;
+      await firestore.collection('fees').doc(widget.student['id']).update({
+        'studentId': widget.student['id'],
+        'totalFees': totalFees,
+      });
+      // Update local cache of fee in feesProvider
+      await ref
+          .read(feesProvider.notifier)
+          .loadFeeForStudent(widget.student['id']);
+
+      // Update batches' studentIds array
+      final oldBatchIds = List<String>.from(widget.student['batchIds'] ?? []);
+      final studentId = widget.student['id'];
+      // Add to new batches
+      for (final batchId in newBatchIds) {
+        if (!oldBatchIds.contains(batchId)) {
+          await firestore.collection('batches').doc(batchId).update({
+            'studentIds': FieldValue.arrayUnion([studentId]),
+          });
+        }
+      }
+      // Remove from old batches
+      for (final batchId in oldBatchIds) {
+        if (!newBatchIds.contains(batchId)) {
+          await firestore.collection('batches').doc(batchId).update({
+            'studentIds': FieldValue.arrayRemove([studentId]),
+          });
+        }
+      }
 
       // Force reload students from Firestore
       await ref
@@ -242,6 +281,21 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
                     );
                   },
                 ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Active'),
+                  Switch(
+                    value: _isActive,
+                    onChanged: (val) {
+                      setState(() {
+                        _isActive = val;
+                      });
+                    },
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../services/summary_dashboard_service.dart';
 
 final studentsProvider =
     StateNotifierProvider<StudentsNotifier, List<Map<String, dynamic>>>((ref) {
@@ -35,7 +36,15 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
 
       final snapshot = await _firestore.collection('students').get();
       final newState =
-          snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+          snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              ...data,
+              'active': data['active'] ?? true,
+              'currentYear': data['currentYear'] ?? DateTime.now().year,
+            };
+          }).toList();
 
       print('Successfully loaded ${newState.length} students from Firestore');
       state = newState;
@@ -52,6 +61,7 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
         state = cachedData;
       } else {
         print('No cached data available as fallback');
+        state = [];
       }
     }
   }
@@ -97,8 +107,6 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
               'profilePhotoUrl': student['profilePhotoUrl'],
               'joinedDate':
                   student['joinedDate'] ?? DateTime.now().toIso8601String(),
-              'totalFees': (student['totalFees'] as num?)?.toDouble() ?? 0.0,
-              'paidFees': (student['paidFees'] as num?)?.toDouble() ?? 0.0,
             };
           }).toList();
 
@@ -117,17 +125,25 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
 
   Future<void> addStudent(Map<String, dynamic> studentData) async {
     try {
-      // Ensure totalFees and paidFees are included
-      final data = {
-        ...studentData,
-        'totalFees': (studentData['totalFees'] as num?)?.toDouble() ?? 0.0,
-        'paidFees': (studentData['paidFees'] as num?)?.toDouble() ?? 0.0,
-      };
+      // Remove totalFees and paidFees
+      final data = Map<String, dynamic>.from(studentData);
+      double totalFees = (studentData['totalFees'] ?? 0).toDouble();
+      data.remove('totalFees');
+      data.remove('paidFees');
+      // Ensure 'active' and 'currentYear' are present
+      if (!data.containsKey('active')) data['active'] = true;
+      if (!data.containsKey('currentYear'))
+        data['currentYear'] = DateTime.now().year;
 
       final docRef = await _firestore.collection('students').add(data);
       final newStudent = {'id': docRef.id, ...data};
       state = [...state, newStudent];
       await _saveToCache(state);
+      // Update summary dashboard
+      await SummaryDashboardService().updateSummary(
+        studentDelta: 1,
+        totalFeesDelta: totalFees,
+      );
     } catch (e) {
       print('Error adding student: $e');
       rethrow;
@@ -141,8 +157,25 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
     try {
       final currentStudent = state.firstWhere((student) => student['id'] == id);
       final updatedData = {...currentStudent, ...studentData};
+      // Fetch the old totalFees from the fees collection (source of truth)
+      final doc = await _firestore.collection('fees').doc(id).get();
+      double oldTotalFees = 0.0;
+      if (doc.exists &&
+          doc.data() != null &&
+          doc.data()!['totalFees'] != null) {
+        oldTotalFees = (doc.data()!['totalFees'] as num).toDouble();
+      }
+      double newTotalFees =
+          (studentData['totalFees'] ?? oldTotalFees).toDouble();
+      double diff = newTotalFees - oldTotalFees;
+      updatedData.remove('totalFees');
+      updatedData.remove('paidFees');
+      // Allow updating 'active' if present
+      if (studentData.containsKey('active')) {
+        updatedData['active'] = studentData['active'];
+      }
 
-      await _firestore.collection('students').doc(id).update(studentData);
+      await _firestore.collection('students').doc(id).update(updatedData);
       state =
           state.map((student) {
             if (student['id'] == id) {
@@ -152,6 +185,10 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
           }).toList();
 
       await _saveToCache(state);
+      // Update summary dashboard if totalFees changed
+      if (diff != 0) {
+        await SummaryDashboardService().updateSummary(totalFeesDelta: diff);
+      }
     } catch (e) {
       print('Error updating student: $e');
       rethrow;
@@ -160,9 +197,22 @@ class StudentsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
 
   Future<void> deleteStudent(String id) async {
     try {
+      // Get the student's totalFees before deleting
+      final doc = await _firestore.collection('fees').doc(id).get();
+      double totalFees = 0.0;
+      if (doc.exists &&
+          doc.data() != null &&
+          doc.data()!['totalFees'] != null) {
+        totalFees = (doc.data()!['totalFees'] as num).toDouble();
+      }
       await _firestore.collection('students').doc(id).delete();
       state = state.where((student) => student['id'] != id).toList();
       await _saveToCache(state);
+      // Update summary dashboard
+      await SummaryDashboardService().updateSummary(
+        studentDelta: -1,
+        totalFeesDelta: -totalFees,
+      );
     } catch (e) {
       print('Error deleting student: $e');
       rethrow;

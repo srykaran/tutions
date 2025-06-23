@@ -58,6 +58,21 @@ class SplashScreen extends StatelessWidget {
   }
 }
 
+class FirebaseGuard extends ConsumerWidget {
+  final Widget child;
+  const FirebaseGuard({required this.child, super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final firebaseInit = ref.watch(firebaseProvider);
+    return firebaseInit.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Firebase init error: $err')),
+      data: (_) => child,
+    );
+  }
+}
+
 class _AppContent extends ConsumerWidget {
   const _AppContent({super.key});
 
@@ -73,9 +88,9 @@ class _AppContent extends ConsumerWidget {
           // User is logged in, check role
           final userRole = ref.watch(authProvider).userRole;
           if (userRole == 'admin') {
-            return const AdminDashboard();
+            return const FirebaseGuard(child: AdminDashboard());
           } else if (userRole == 'teacher') {
-            return const TeacherDashboard();
+            return const FirebaseGuard(child: TeacherDashboard());
           } else {
             // Unknown role, show login screen
             return const LoginScreen();

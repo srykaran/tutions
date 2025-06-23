@@ -1,11 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../constants/theme.dart';
+import '../../../services/summary_dashboard_service.dart';
+import '../../../models/summary_dashboard.dart';
+import '../../../main.dart'; // for firebaseProvider
 
-class DashboardHome extends StatelessWidget {
+class DashboardHome extends ConsumerStatefulWidget {
   const DashboardHome({super.key});
 
   @override
+  ConsumerState<DashboardHome> createState() => _DashboardHomeState();
+}
+
+class _DashboardHomeState extends ConsumerState<DashboardHome> {
+  late Future<SummaryDashboard> _summaryFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Do not call getSummary here; wait for Firebase in build
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final firebaseInit = ref.watch(firebaseProvider);
+    return firebaseInit.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Firebase init error: $err')),
+      data: (_) => _buildDashboardContent(context),
+    );
+  }
+
+  Widget _buildDashboardContent(BuildContext context) {
+    // Only call getSummary after Firebase is ready
+    _summaryFuture = SummaryDashboardService().getSummary();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -38,60 +66,135 @@ class DashboardHome extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           // Summary Cards
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
-              final childAspectRatio = constraints.maxWidth > 600 ? 1.2 : 1.0;
-              return GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: crossAxisCount,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: childAspectRatio,
-                children: [
-                  _buildSummaryCard(
-                    context,
-                    'Total Students',
-                    '150',
-                    Icons.people,
-                    AppTheme.primaryColor,
-                  ),
-                  _buildSummaryCard(
-                    context,
-                    'Total Fees',
-                    '₹2,50,000',
-                    Icons.payments,
-                    AppTheme.successColor,
-                  ),
-                  _buildSummaryCard(
-                    context,
-                    'Total Batches',
-                    '12',
-                    Icons.class_,
-                    AppTheme.secondaryColor,
-                  ),
-                  _buildSummaryCard(
-                    context,
-                    'Pending Fees',
-                    '₹45,000',
-                    Icons.pending_actions,
-                    AppTheme.errorColor,
-                  ),
-                ],
+          FutureBuilder<SummaryDashboard>(
+            future: _summaryFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return _buildSummaryGrid(
+                  totalStudents: 0,
+                  totalFees: 0.0,
+                  totalBatches: 0,
+                  paidFees: 0.0,
+                  pendingFees: 0.0,
+                  error: 'Error loading summary',
+                );
+              }
+              final summary =
+                  snapshot.data ??
+                  SummaryDashboard(
+                    totalStudents: 0,
+                    totalBatches: 0,
+                    totalFees: 0.0,
+                    paidFees: 0.0,
+                  );
+              final pendingFees = summary.totalFees - summary.paidFees;
+              return _buildSummaryGrid(
+                totalStudents: summary.totalStudents,
+                totalFees: summary.totalFees,
+                totalBatches: summary.totalBatches,
+                paidFees: summary.paidFees,
+                pendingFees: pendingFees,
               );
             },
           ),
           const SizedBox(height: 24),
-          // Recent Activity
-          Text(
-            'Recent Activity',
-            style: Theme.of(context).textTheme.titleLarge,
+          // 🚧 Upcoming student, teacher, parent app soon...
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40.0),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.construction, size: 48, color: Colors.black54),
+                  SizedBox(height: 16),
+                  Text(
+                    'Upcoming Student, Teacher & Parent Apps',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'We are working hard to bring dedicated apps for students, teachers, and parents very soon. Stay tuned for updates!',
+                    style: TextStyle(fontSize: 16, color: Colors.black87),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          SizedBox(height: 300, child: _buildActivityList()),
         ],
       ),
+    );
+  }
+
+  Widget _buildSummaryGrid({
+    required int totalStudents,
+    required double totalFees,
+    required int totalBatches,
+    required double paidFees,
+    required double pendingFees,
+    String? error,
+  }) {
+    return Column(
+      children: [
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text(error, style: TextStyle(color: Colors.red)),
+          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
+            final childAspectRatio = constraints.maxWidth > 600 ? 1.2 : 1.0;
+            return GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: childAspectRatio,
+              children: [
+                _buildSummaryCard(
+                  context,
+                  'Total Students',
+                  totalStudents.toString(),
+                  Icons.people,
+                  AppTheme.primaryColor,
+                ),
+                _buildSummaryCard(
+                  context,
+                  'Total Fees',
+                  '₹${totalFees.toStringAsFixed(0)}',
+                  Icons.payments,
+                  AppTheme.successColor,
+                ),
+                _buildSummaryCard(
+                  context,
+                  'Total Batches',
+                  totalBatches.toString(),
+                  Icons.class_,
+                  AppTheme.secondaryColor,
+                ),
+                _buildSummaryCard(
+                  context,
+                  'Pending Fees',
+                  '₹${pendingFees.toStringAsFixed(0)}',
+                  Icons.pending_actions,
+                  AppTheme.errorColor,
+                ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 

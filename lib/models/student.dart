@@ -7,6 +7,8 @@ class Student {
   final String batchId;
   final String? profilePhotoUrl;
   final DateTime joinedDate;
+  final bool active;
+  final int currentYear;
 
   Student({
     required this.id,
@@ -17,6 +19,8 @@ class Student {
     required this.batchId,
     this.profilePhotoUrl,
     required this.joinedDate,
+    required this.active,
+    required this.currentYear,
   });
 
   Map<String, dynamic> toJson() {
@@ -29,6 +33,8 @@ class Student {
       'batchId': batchId,
       'profilePhotoUrl': profilePhotoUrl,
       'joinedDate': joinedDate.toIso8601String(),
+      'active': active,
+      'currentYear': currentYear,
     };
   }
 
@@ -42,6 +48,13 @@ class Student {
       batchId: json['batchId'] as String,
       profilePhotoUrl: json['profilePhotoUrl'],
       joinedDate: DateTime.parse(json['joinedDate'] as String),
+      active:
+          json['active'] is bool ? json['active'] : json['active'] == 'active',
+      currentYear:
+          json['currentYear'] is int
+              ? json['currentYear']
+              : int.tryParse(json['currentYear'].toString()) ??
+                  DateTime.now().year,
     );
   }
-} 
+}
